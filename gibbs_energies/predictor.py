@@ -5,16 +5,15 @@ Created on Tue May 15 14:55:39 2018
 @author: Chris
 """
 
-from typing import Optional, Dict
-import json
-import re
-from itertools import combinations
 import math
+from typing import Any, Iterable, Optional, Dict
+import json
+from itertools import combinations
 
 from pymatgen.core.structure import Structure
 import numpy as np
 
-from .formula import StandardFormula
+from formula import StandardFormula
 
 class PredictG(object):
     """
@@ -31,179 +30,176 @@ class PredictG(object):
                  ):
         """
         Arguments:
-        initial_formula - chemical formula (can be poorly formatted)
-        H - formation enthalpy at 0 or 298 K [eV/atom]
-        path_to_structure - path to DFT-optimized geometry file or None if providing volume per atom as float
-        path_to_masses - path to .json with {el (str) : atomic mass (float) [amu]}
-        path_to_chempots - path to .json with {temperature (str) [K] : {el (str) : G_el(T) (float) [eV/atom]}}
+            initial_formula - chemical formula (can be poorly formatted)
+            H - formation enthalpy at 0 or 298 K [eV/atom]
+            path_to_structure - path to DFT-optimized geometry file or None if providing volume per atom as float
+            path_to_masses - path to .json with {el (str) : atomic mass (float) [amu]}
+            path_to_chempots - path to .json with {temperature (str) [K] : {el (str) : G_el(T) (float) [eV/atom]}}
         """
         self.H = H
-        self.initial_formula = initial_formula
+        self.formula = StandardFormula(initial_formula)
         self.path_to_structure = path_to_structure
         self.path_to_masses = path_to_masses
         self.path_to_chempots = path_to_chempots
-    
+
+
     @property
     def standardize_formula(self) -> str:
         """
-        Returns nicely formatted and alphabetized formula.
+        Returns:
+            Nicely formatted and alphabetized formula.
+        
         Read more about conversion in gibbs_energies.formula.StandardFormula.
         """
-        return StandardFormula(self.initial_formula).string
-        
+        return self.formula.string
+
+
     @property
-    def atom_names(self):
+    def atom_names(self) -> Iterable[str]:
         """
         Returns:
-            list of alphabetized elements in formula (str)
+            List of elements in formula in alphabetized order.
         """
-        formula = self.standardize_formula
-        return re.findall('[A-Z][a-z]?', formula)
-    
+        return self.formula.set.keys()
+
+
     @property
-    def atom_nums(self):
+    def atom_nums(self) -> Iterable[int]:
         """
         Returns:
-            list of alphabetized elements in formula (str)
-        """    
-        formula = self.standardize_formula
-        return [int(num) for num in re.findall('\d+', formula)]
-    
+            List of numbers of elements in formula in alphabetized order.
+        """
+        return self.formula.set.values()
+
+
     @property
-    def num_atoms(self):
+    def atom_total(self) -> int:
         """
         Returns:
-            number of atoms in formula unit (float)
+            Number of atoms in formula unit.
         """
-        return np.sum(self.atom_nums)
+        return sum(self.atom_nums)
+
 
     @property
     def mass_d(self) -> Dict[str, float]:
         """
         Returns:
-            {el (str) : atomic mass (float) [amu]} (dict)
+            Parsed masses json in the following format:
+            {el : atomic mass [amu]}
         """
         with open(self.path_to_masses) as f:
             return json.load(f)
-    
+
+
     @property
-    def Gi_d(self):
+    def Gi_d(self) -> Any: # Currently Any because of complex form of chempots
         """
         Returns:
-            {temperature (str) [K] : {el (str) : G_el(T) (float) [eV/atom]}} (dict)
+            Parsed chempots json in the following format:
+            {temperature (str) [K] : {el (str) : G_el(T) (float) [eV/atom]}}
         """        
         with open(self.path_to_chempots) as f:
             return json.load(f)
-        
+
+
     @property
-    def m(self):
+    def m(self) -> float:
         """
         Returns:
-            reduced mass (float)
+            Reduced mass.
         """
-        names = self.atom_names
-        nums = self.atom_nums
-        mass_d = self.mass_d
-        num_els = len(names)
-        num_atoms = np.sum(nums)        
-        denom = (num_els - 1) * num_atoms
-        if denom <= 0:
-            print('descriptor should not be applied to unary compounds (elements)')
-            return np.nan
-        masses = [mass_d[el] for el in names]
-        good_masses = [m for m in masses if not math.isnan(m)]
-        if len(good_masses) != len(masses):
-            for el in names:
-                if math.isnan(mass_d[el]):
-                    print('I dont have a mass for %s...' % el)
-                    return np.nan
-        else:
-            pairs = list(combinations(names, 2))
-            pair_red_lst = []
-            for i in range(len(pairs)):
-                first_elem = names.index(pairs[i][0])
-                second_elem = names.index(pairs[i][1])
-                pair_coeff = nums[first_elem] + nums[second_elem]
-                pair_prod = masses[first_elem] * masses[second_elem]
-                pair_sum = masses[first_elem] + masses[second_elem]
-                pair_red = pair_coeff * pair_prod / pair_sum
-                pair_red_lst.append(pair_red)
-            return np.sum(pair_red_lst) / denom
-            
-    def V(self, vol_per_atom: Optional[float] = False):
+        if len(self.formula.set) == 1:
+            raise ValueError(f'Descriptor should not be applied to unary compounds: {self.formula.string}')
+
+        for name in self.atom_names:
+            if name not in self.mass_d.keys():
+                raise ValueError(f'Unable to find mass of {name} in provided table')
+        
+        masses = map(self.mass_d.__getitem__, self.atom_names)
+        
+        total = .0
+        for (mass1, num1), (mass2, num2) in combinations(zip(masses, self.atom_nums), 2):            
+            total += (num1 + num2) * mass1 * mass2 / (mass1 + mass2)
+
+        return total / ((len(self.formula.set) - 1) * self.atom_total)
+
+
+    def V(self, vol_per_atom: Optional[float] = None) -> float:
         """
-        Args:
-            vol_per_atom (float or bool) - if reading in structure file, False; else the calculated atomic volume [A^3/atom]
+        Arguments:
+            vol_per_atom - calculated atomic volume [A^3/atom] or None if reading in structure file
         Returns:
-            calculated atomic volume (float) [A^3/atom]
+            calculated atomic volume [A^3/atom]
         """
-        if self.path_to_structure != False:
-            struct = Structure.from_file(self.path_to_structure )
+        if self.path_to_structure is not None:
+            struct = Structure.from_file(self.path_to_structure)
             return struct.volume / len(struct) 
         else:
             return vol_per_atom
-    
-    def Gd_sisso(self, T, vol_per_atom=False):
+
+
+    def Gd_sisso(self, T: int, vol_per_atom: Optional[float] = None) -> float:
         """
-        Args:
-            T (int) - temperature [K]
-            vol_per_atom (float or bool) - if reading in structure file, False; else the calculated atomic volume [A^3/atom]        
+        Arguments:
+            T - temperature [K]
+            vol_per_atom - calculated atomic volume [A^3/atom] or None if reading in structure file
         Returns:
             G^delta as predicted by SISSO-learned descriptor (float) [eV/atom]
         """
         if len(self.atom_names) == 1:
-            return 0
+            return .0
         else:
             m = self.m
             V = self.V(vol_per_atom)
-            return (-2.48e-4*np.log(V) - 8.94e-5*m/V)*T + 0.181*np.log(T) - 0.882
-    
-    def summed_Gi(self, T):
+            return (-2.48e-4 * math.log(V) - 8.94e-5 * m / V) * T + 0.181 * math.log(T) - 0.882
+
+
+    def summed_Gi(self, T: int) -> float:
         """
-        Args:
-            T (int) - temperature [K]
+        Arguments:
+            T - temperature [K]
         Returns:
             sum of the stoichiometrically weighted chemical potentials of the elements at T (float) [eV/atom]
         """
-        names, nums = self.atom_names, self.atom_nums
-        Gels = self.Gi_d
-        els_sum = 0
-        for i in range(len(names)):
-            el = names[i]
-            if el not in Gels[str(T)]:
-                return np.nan
-            num = nums[i]
-            Gi = Gels[str(T)][el]
-            els_sum += num*Gi
-        return els_sum
-    
-    def G(self, T, vol_per_atom=False):
+        total = .0
+        for el, num in zip(self.atom_names, self.atom_nums):
+            
+            if str(T) not in self.Gi_d or el not in self.Gi_d[str(T)]:
+                raise ValueError(f'No entry in chempots for {el} with T={T}')
+            
+            Gi = self.Gi_d[str(T)][el]
+            total += num * Gi
+        return total
+
+
+    def G(self, T: int, vol_per_atom: Optional[float] = None) -> float:
         """
         Args:
             T (int) - temperature [K]
-            vol_per_atom (float or bool) - if reading in structure file, False; else the calculated atomic volume [A^3/atom]        
+            vol_per_atom - calculated atomic volume [A^3/atom] or None if reading in structure file
         Returns:
             Absolute Gibbs energy at T using SISSO-learned descriptor for G^delta (float) [eV/atom]
         """
         if len(self.atom_names) == 1:
-            Gels = self.Gi_d
-            el = self.atom_names[0]
-            return Gels[str(T)][el]
+            return self.Gi_d[str(T)][self.atom_names[0]]
         else:
             return self.H + self.Gd_sisso(T, vol_per_atom)
-    
-    def dG(self, T, vol_per_atom=False):
+
+
+    def dG(self, T: int, vol_per_atom: Optional[float] = None) -> float:
         """
-        Args:
-            T (int) - temperature [K]
-            vol_per_atom (float or bool) - if reading in structure file, False; else the calculated atomic volume [A^3/atom]        
+        Arguments:
+            T - temperature [K]
+            vol_per_atom - calculated atomic volume [A^3/atom] or None if reading in structure file
         Returns:
             Gibbs formation energy at T using SISSO-learned descriptor for G^delta (float) [eV/atom]
         """
         if len(self.atom_names) == 1:
-            return 0.
+            return .0
         else:
-            return ((self.H + self.Gd_sisso(T, vol_per_atom))*96.485*self.num_atoms - 96.485*self.summed_Gi(T)) / self.num_atoms / 96.485
+            return ((self.H + self.Gd_sisso(T, vol_per_atom)) * 96.485 * self.atom_total - 96.485 * self.summed_Gi(T)) / (self.atom_total * 96.485)
+
 
 def get_dGAl2O3_from_structure():
     """
@@ -225,6 +221,7 @@ def get_dGAl2O3_from_structure():
         print('T = %i K; dG = %.3f eV/atom' % (T, obj.dG(T=T, vol_per_atom=False)))
     print('------------------------------\n')
     return obj
+
 
 def get_dMgAl2O4_without_structure():
     """
@@ -248,6 +245,7 @@ def get_dMgAl2O4_without_structure():
     print('------------------------------\n')
     return obj
 
+
 def main():
     """
     run demonstrations
@@ -257,6 +255,7 @@ def main():
     obj1 = get_dGAl2O3_from_structure()
     obj2 = get_dMgAl2O4_without_structure()
     return obj1, obj2
+
 
 if __name__ == '__main__':
     obj1, obj2 = main()

@@ -37,3 +37,5 @@ Contains chemical formula parser; see comments within for usage examples.
 - Formula standardizer extracted into separate class, now it is much more time-efficient (from 9x to 28x on different benchmarks) and able to process more complicated formulas;
 
 - Tests provided to cover formula standartization.
+
+- Predictor refactored and type hints provided.
