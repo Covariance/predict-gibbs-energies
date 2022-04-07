@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue May 15 14:55:39 2018
-
-@author: Chris
-"""
+# @author: Chris, Tue May 15 14:55:39 2018
+# @author: Covariance (Pavel Martynov), 2022
 
 import math
 from typing import Any, Iterable, Optional, Dict

@@ -22,6 +22,14 @@ Dictionary of experimental Gibbs energies (chemical potentials) for the elements
   
 Structure file for **Al2O3** from [Materials Project](https://materialsproject.org/) to demonstrate use of descriptor.
 
+## CLI
+
+CLI is provided for the Gibbs energy approximation. An example usage of it for **Al2O3**:
+
+```shell
+./cli.py --formula Al2O3 --H=-3.442 --structure=data/POSCAR.mp-1143_Al2O3
+```
+
 ## Implementing descriptor
 
 ### predictor.py
@@ -36,11 +44,13 @@ Contains chemical formula parser; see comments within for usage examples.
 
 - Formula standardizer extracted into separate class, now it is much more time-efficient (from 9x to 28x on different benchmarks) and able to process more complicated formulas;
 
-- Tests provided to cover formula standartization.
+- Tests provided to cover formula standartization;
 
-- Predictor refactored and type hints provided in accordance with MyPy guidelines.
+- Predictor refactored and type hints provided in accordance with MyPy guidelines;
 
-- Integrational tests for matching results with previous implementation provided.
+- Integrational tests for matching results with previous implementation provided;
+
+- CLI interface for predictor provided.
 
 ## TBD
 
