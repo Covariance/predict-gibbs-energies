@@ -23,7 +23,7 @@ def main(
     vol      : Optional[float],
     masses   : str,
     chempots : str,
-    temp     : List[str],
+    temp     : List[int],
     ):
     
     if structure is None and vol is None:

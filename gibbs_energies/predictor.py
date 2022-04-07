@@ -138,7 +138,7 @@ class Predictor(object):
             return vol_per_atom
 
 
-    def Gd_sisso(self, T: int, vol_per_atom: Optional[float] = None) -> float:
+    def Gd_sisso(self, T: float, vol_per_atom: Optional[float] = None) -> float:
         """
         Arguments:
             T - temperature [K]
@@ -154,7 +154,7 @@ class Predictor(object):
             return (-2.48e-4 * math.log(V) - 8.94e-5 * m / V) * T + 0.181 * math.log(T) - 0.882
 
 
-    def summed_Gi(self, T: int) -> float:
+    def summed_Gi(self, T: float) -> float:
         """
         Arguments:
             T - temperature [K]
@@ -172,10 +172,10 @@ class Predictor(object):
         return total
 
 
-    def G(self, T: int, vol_per_atom: Optional[float] = None) -> float:
+    def G(self, T: float, vol_per_atom: Optional[float] = None) -> float:
         """
         Args:
-            T (int) - temperature [K]
+            T - temperature [K]
             vol_per_atom - calculated atomic volume [A^3/atom] or None if reading in structure file
         Returns:
             Absolute Gibbs energy at T using SISSO-learned descriptor for G^delta (float) [eV/atom]
@@ -187,7 +187,7 @@ class Predictor(object):
             return self.H + self.Gd_sisso(T, vol_per_atom)
 
 
-    def dG(self, T: int, vol_per_atom: Optional[float] = None) -> float:
+    def dG(self, T: float, vol_per_atom: Optional[float] = None) -> float:
         """
         Arguments:
             T - temperature [K]

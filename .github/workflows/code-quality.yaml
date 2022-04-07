@@ -1,0 +1,26 @@
+name: Quality Checks
+on: [push, pull_request]
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    name: Linter
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - run: pip install --upgrade -r dev-requirements.txt
+    - run: mypy $(git ls-files '*.py')
+
+  testing:
+    runs-on: ubuntu-latest
+    name: Testing
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - run: pip install --upgrade -r dev-requirements.txt
+    - run: pytest unit/
+    - run: pytest integration/

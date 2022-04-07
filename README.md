@@ -50,8 +50,12 @@ Contains chemical formula parser; see comments within for usage examples.
 
 - Integrational tests for matching results with previous implementation provided;
 
-- CLI interface for predictor provided.
+- CLI interface for predictor provided;
+
+- CI/CD pipelines added for code quality control and testing.
 
 ## TBD
 
-- Move floating-point calculations to high-precision class, such as Decimal.
+- Move floating-point calculations to high-precision class, such as Decimal;
+
+- Provide GUI-backed application for the predictor.
