@@ -11,9 +11,8 @@ import json
 from itertools import combinations
 
 from pymatgen.core.structure import Structure
-import numpy as np
 
-from formula import StandardFormula
+from gibbs_energies.formula import StandardFormula
 
 class PredictG(object):
     """
@@ -136,6 +135,9 @@ class PredictG(object):
             struct = Structure.from_file(self.path_to_structure)
             return struct.volume / len(struct) 
         else:
+            if vol_per_atom is None:
+                raise ValueError('vol_per_atom cannot be None of path to structure is not provided')
+
             return vol_per_atom
 
 
@@ -147,7 +149,7 @@ class PredictG(object):
         Returns:
             G^delta as predicted by SISSO-learned descriptor (float) [eV/atom]
         """
-        if len(self.atom_names) == 1:
+        if len(self.formula.set) == 1:
             return .0
         else:
             m = self.m
@@ -181,8 +183,9 @@ class PredictG(object):
         Returns:
             Absolute Gibbs energy at T using SISSO-learned descriptor for G^delta (float) [eV/atom]
         """
-        if len(self.atom_names) == 1:
-            return self.Gi_d[str(T)][self.atom_names[0]]
+        if len(self.formula.set) == 1:
+            # For now the type hint is ignored, because sortedcontainers is not typed
+            return self.Gi_d[str(T)][self.atom_names[0]] # type: ignore
         else:
             return self.H + self.Gd_sisso(T, vol_per_atom)
 
@@ -195,7 +198,7 @@ class PredictG(object):
         Returns:
             Gibbs formation energy at T using SISSO-learned descriptor for G^delta (float) [eV/atom]
         """
-        if len(self.atom_names) == 1:
+        if len(self.formula.set) == 1:
             return .0
         else:
             return ((self.H + self.Gd_sisso(T, vol_per_atom)) * 96.485 * self.atom_total - 96.485 * self.summed_Gi(T)) / (self.atom_total * 96.485)

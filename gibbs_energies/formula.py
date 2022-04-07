@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # @author: Covariance (Pavel Martynov), 2022
 
-from sortedcontainers import SortedDict
+# No type hints in sortedcontainers!
+from sortedcontainers import SortedDict # type: ignore
 
 
 class StandardFormula:

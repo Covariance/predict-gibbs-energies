@@ -2,7 +2,9 @@
 # @author: Covariance (Pavel Martynov), 2022
 
 from typing import Dict
-from sortedcontainers import SortedDict
+
+# No type hints in sortedcontainers!
+from sortedcontainers import SortedDict # type: ignore
 
 from gibbs_energies.formula import StandardFormula
 
