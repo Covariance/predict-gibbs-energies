@@ -38,4 +38,10 @@ Contains chemical formula parser; see comments within for usage examples.
 
 - Tests provided to cover formula standartization.
 
-- Predictor refactored and type hints provided.
+- Predictor refactored and type hints provided in accordance with MyPy guidelines.
+
+- Integrational tests for matching results with previous implementation provided.
+
+## TBD
+
+- Move floating-point calculations to high-precision class, such as Decimal.

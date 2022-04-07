@@ -14,7 +14,7 @@ from pymatgen.core.structure import Structure
 
 from gibbs_energies.formula import StandardFormula
 
-class PredictG(object):
+class Predictor(object):
     """
     Designed to take temperature-independent calculated or experimental data as input 
     and return the Gibbs formation energy at some temperature by applying
@@ -202,63 +202,3 @@ class PredictG(object):
             return .0
         else:
             return ((self.H + self.Gd_sisso(T, vol_per_atom)) * 96.485 * self.atom_total - 96.485 * self.summed_Gi(T)) / (self.atom_total * 96.485)
-
-
-def get_dGAl2O3_from_structure():
-    """
-    demonstration of how to get dG from optimized structure
-    """
-    print('------------------------------')    
-    initial_formula = 'Al2O3'
-    print('approximating dGf for %s...' % initial_formula)    
-    path_to_structure = 'data/POSCAR.mp-1143_Al2O3'
-    path_to_masses = 'data/masses.json'
-    path_to_chempots = 'data/gels.json'
-    H = -3.442 # eV/atom
-    obj = PredictG(initial_formula,
-                   H,
-                   path_to_structure,
-                   path_to_masses,
-                   path_to_chempots)
-    for T in [300, 600, 900, 1200, 1500, 1800]:
-        print('T = %i K; dG = %.3f eV/atom' % (T, obj.dG(T=T, vol_per_atom=False)))
-    print('------------------------------\n')
-    return obj
-
-
-def get_dMgAl2O4_without_structure():
-    """
-    demonstration of how to get dG from inputted volume per atom
-    """
-    print('------------------------------')
-    initial_formula = 'MgAl2O4'
-    print('approximating dGf for %s...' % initial_formula)
-    path_to_structure = False
-    V = 9.7 # A^3/atom (assuming tabulated somewhere, e.g. Materials Project)
-    path_to_masses = 'data/masses.json'
-    path_to_chempots = 'data/gels.json'
-    H = -3.404 # eV/atom
-    obj = PredictG(initial_formula,
-                   H,
-                   path_to_structure,
-                   path_to_masses,
-                   path_to_chempots)
-    for T in [300, 600, 900, 1200, 1500, 1800]:
-        print('T = %i K; dG = %.3f eV/atom' % (T, obj.dG(T=T, vol_per_atom=V)))
-    print('------------------------------\n')
-    return obj
-
-
-def main():
-    """
-    run demonstrations
-    Returns:
-        PredictG objects
-    """
-    obj1 = get_dGAl2O3_from_structure()
-    obj2 = get_dMgAl2O4_without_structure()
-    return obj1, obj2
-
-
-if __name__ == '__main__':
-    obj1, obj2 = main()
